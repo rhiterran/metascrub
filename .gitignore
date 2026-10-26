@@ -1,0 +1,19 @@
+# build output
+*.exe
+metascrub_linux
+/bin/
+/dist/
+*.zip
+
+# local test scratch
+/sample*/
+/mixed*/
+/prog*/
+/vids*/
+/vonly*/
+
+# editor / OS cruft
+.DS_Store
+.idea/
+.vscode/
+*.swp
