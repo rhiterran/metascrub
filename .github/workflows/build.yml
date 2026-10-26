@@ -1,0 +1,37 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Build Windows x64 (GUI)
+        run: GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "-H=windowsgui -s -w" -o metascrub-gui.exe .
+
+      - name: Upload unsigned artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: metascrub-gui
+          path: metascrub-gui.exe
+
+      # --- Code signing (SignPath Foundation, free for OSS) ---
+      # After your project is approved at https://signpath.org/ and connected to
+      # this repo, add a signing step here that consumes the artifact above.
+      # SignPath provides the exact `signpath/github-action-submit-signing-request`
+      # step and the connector token; it signs within the pipeline using a cloud
+      # HSM, so no certificate or token is ever stored in the repo or on your PC.
