@@ -1,6 +1,6 @@
 // metascrub core: find image and video files and write copies with all
-// metadata removed. Images are stripped losslessly in pure Go; videos are
-// remuxed losslessly via ffmpeg (stream copy). Originals are never modified.
+// metadata removed. Images and videos are both stripped losslessly in pure Go
+// (see video.go for videos). Originals are never modified.
 //
 // Work is reported through a Progress struct so a GUI can show a live bar and
 // the current file, and so the caller can run it on a background thread.
@@ -64,10 +64,9 @@ func (p Progress) status(frac float64, idx, total int, name string) {
 
 // Result summarizes a run.
 type Result struct {
-	Processed       int
-	Failed          int
-	SkippedNoFFmpeg int
-	OutLoc          string
+	Processed int
+	Failed    int
+	OutLoc    string
 }
 
 type fileItem struct {
@@ -131,7 +130,8 @@ func collect(path string, recursive bool) (items []fileItem, outLoc string, err 
 }
 
 // ScrubWithProgress cleans a single file or a folder, reporting via prog.
-// ffmpeg/ffprobe may be "" — images are still processed; videos are skipped.
+// ffmpeg/ffprobe are optional: they are only used as a compatibility fallback
+// for a video file whose structure the native code cannot parse.
 func ScrubWithProgress(path string, recursive bool, ffmpeg, ffprobe string, prog Progress) (Result, error) {
 	var res Result
 	items, outLoc, err := collect(path, recursive)
@@ -168,20 +168,14 @@ func ScrubWithProgress(path string, recursive bool, ffmpeg, ffprobe string, prog
 		prog.status(overall(completed, 0), idx, len(items), it.label)
 
 		var e error
+		detail := ""
 		switch it.kind {
 		case "image":
 			e = scrubImageFile(it.src, it.dst, strings.ToLower(filepath.Ext(it.src)))
 			prog.status(overall(completed, it.size), idx, len(items), it.label)
 		case "video":
-			if ffmpeg == "" {
-				res.SkippedNoFFmpeg++
-				prog.log("skipped (needs ffmpeg): " + it.label)
-				completed += it.size
-				prog.status(overall(completed, 0), idx, len(items), it.label)
-				continue
-			}
 			sz := it.size
-			e = stripVideoProgress(it.src, it.dst, ffmpeg, ffprobe, func(fr float64) {
+			detail, e = scrubVideoFile(it.src, it.dst, ffmpeg, ffprobe, func(fr float64) {
 				prog.status(overall(completed, int64(fr*float64(sz))), idx, len(items), it.label)
 			})
 		}
@@ -191,7 +185,11 @@ func ScrubWithProgress(path string, recursive bool, ffmpeg, ffprobe string, prog
 			prog.log("FAILED " + it.label + ": " + e.Error())
 		} else {
 			res.Processed++
-			prog.log("cleaned " + it.label)
+			if detail != "" {
+				prog.log("cleaned " + it.label + "  (" + detail + ")")
+			} else {
+				prog.log("cleaned " + it.label)
+			}
 		}
 		completed += it.size
 		prog.status(overall(completed, 0), idx, len(items), it.label)

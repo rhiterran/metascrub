@@ -243,8 +243,8 @@ func createControls(hwnd uintptr) {
 	pSendMessage.Call(hProg, pbmSETRANGE32, 0, 1000)
 	hLog = mk("EDIT", wsCHILD|wsVISIBLE|wsBORDER|wsVSCROLL|esMULTILINE|esAUTOVSCROLL|esREADONLY, 104)
 	logln("Pick a file or folder, then click \"Remove metadata → copies\".")
-	logln("Images (jpg/png) need nothing. Videos use ffmpeg if installed.")
-	logln("Folder → <folder>-cleaned; single file → <name>-nometa.<ext>. Lossless: no re-encoding.")
+	logln("Images and videos are cleaned directly — nothing else to install.")
+	logln("Folder → <folder>-cleaned; single file → <name>-nometa.<ext>. Lossless: audio/video data is untouched.")
 }
 
 func layout(hwnd uintptr) {
@@ -317,11 +317,6 @@ func onClean(hwnd uintptr) {
 	setText(hLog, "")
 	setProgress(0)
 	setText(hStatus, "Scanning…")
-	if ff != "" {
-		logln("ffmpeg: " + ff)
-	} else {
-		logln("ffmpeg: not found — images will still be processed, videos skipped")
-	}
 	logln("Processing: " + in)
 
 	// reset shared state
@@ -370,23 +365,16 @@ func onTimer(hwnd uintptr) {
 	pKillTimer.Call(hwnd, idTimer)
 	setProgress(1000)
 	setText(hStatus, "Done.")
-	logln(fmt.Sprintf("Done. cleaned=%d  failed=%d  skipped=%d", res.Processed, res.Failed, res.SkippedNoFFmpeg))
+	logln(fmt.Sprintf("Done. cleaned=%d  failed=%d", res.Processed, res.Failed))
 	if res.OutLoc != "" {
 		logln("Output: " + res.OutLoc)
 	}
-	if res.SkippedNoFFmpeg > 0 {
-		logln("Some videos were skipped (ffmpeg not installed).")
-		logln("Install it (free):  winget install Gyan.FFmpeg  — then run again.")
-	}
 
 	icon := uintptr(mbICONINFO)
-	if res.Failed > 0 || res.SkippedNoFFmpeg > 0 || perr != nil {
+	if res.Failed > 0 || perr != nil {
 		icon = mbICONWARNING
 	}
 	summary := fmt.Sprintf("Cleaned copies: %d\nFailures: %d", res.Processed, res.Failed)
-	if res.SkippedNoFFmpeg > 0 {
-		summary += fmt.Sprintf("\nVideos skipped (need ffmpeg): %d", res.SkippedNoFFmpeg)
-	}
 	if res.OutLoc != "" {
 		summary += "\n\nOutput:\n" + res.OutLoc
 	}

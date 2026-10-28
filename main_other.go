@@ -34,11 +34,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "metascrub:", err)
 		os.Exit(1)
 	}
-	fmt.Printf("cleaned=%d failed=%d skipped(no ffmpeg)=%d\noutput: %s\n",
-		res.Processed, res.Failed, res.SkippedNoFFmpeg, res.OutLoc)
-	if res.SkippedNoFFmpeg > 0 {
-		fmt.Fprintln(os.Stderr, "note: install ffmpeg to process video files")
-	}
+	fmt.Printf("cleaned=%d failed=%d\noutput: %s\n", res.Processed, res.Failed, res.OutLoc)
 	if res.Failed > 0 {
 		os.Exit(1)
 	}

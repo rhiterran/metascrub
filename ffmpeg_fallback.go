@@ -1,3 +1,6 @@
+// Optional compatibility fallback: if a video file's structure cannot be
+// parsed natively (e.g. it is damaged) and ffmpeg happens to be installed, the
+// file is remuxed with ffmpeg instead. Nothing here is needed for normal use.
 package main
 
 import (
